@@ -42,7 +42,7 @@ const userSchema=new Schema(
             type:String,
             required:[true,'password is required']
         },
-        refreshtoken:{
+        refreshToken:{
             type:String
         }
 
@@ -55,7 +55,7 @@ const userSchema=new Schema(
 // this part is important,here do not use arrow function because arrow func does not aloow the 'this' for the scheema we need to add normal function and it is the ENCRYPT PART.......also this should be in modified part beacuse if not modified then it updates the password all the time....and this is wrong
 userSchema.pre("save", async function(next){
     if(this.isModified("password")){
-        this.password=bcrypt.hash(this.password,10)
+        this.password=await bcrypt.hash(this.password,10)
         next()
     }
 })
