@@ -54,10 +54,8 @@ const userSchema=new Schema(
 
 // this part is important,here do not use arrow function because arrow func does not aloow the 'this' for the scheema we need to add normal function and it is the ENCRYPT PART.......also this should be in modified part beacuse if not modified then it updates the password all the time....and this is wrong
 userSchema.pre("save", async function(next){
-    if(this.isModified("password")){
-        this.password=await bcrypt.hash(this.password,10)
-        next()
-    }
+    if(!this.isModified("password")) return ;
+    this.password=await bcrypt.hash(this.password,10);
 })
 
 userSchema.methods.isPasswordCorrect=async function(password){
@@ -91,4 +89,4 @@ userSchema.methods.generateRefreshToken= function(){
 }
 
 
-export const user=mongoose.model("User",userSchema)
+export const User=mongoose.model("User",userSchema)

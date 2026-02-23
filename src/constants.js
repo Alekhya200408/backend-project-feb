@@ -1,1 +1,1 @@
-export const DB_NAME="Mongo Database"
+export const DB_NAME="newbackend"
