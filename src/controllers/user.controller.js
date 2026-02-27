@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/Cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"
+import { set } from "mongoose";
 
 
 
@@ -26,7 +27,7 @@ const generateRefreshandAccesstokens= async (userId)=>{
     
 }
 
-
+// register user
 const registerUser=asyncHandler(async (req,res)=>{
     // get user details from frontend
     // validation - not empty
@@ -111,7 +112,7 @@ const registerUser=asyncHandler(async (req,res)=>{
     )
 })
 
-
+// login user
 const loginUser=asyncHandler(async(req,res)=>{
     // req.body-> data
     // username or email
@@ -243,9 +244,124 @@ const refreshAccesstoken=asyncHandler(async(req,res)=>{
    }
 })
 
+// changepassword
+const changepassword=asyncHandler(async(req,res)=>{
+    const {oldPassword,newPassword}=req.body
+
+    const user=User.findById(req.user?._id)
+
+    const ispasswordcorrect= await user.isPasswordCorrect(oldPassword) //from user model ispasswordcorrect method
+
+    if(!ispasswordcorrect){
+        throw new ApiError(400,"Password is wrong")
+    }
+
+    user.password=newPassword
+    await user.save() //always use await here for database purpose 
+
+    // for a massage direct return no need for const
+    return res
+    .status(200)
+    .json(new ApiResponse(200,{},"Password changed"))
+    
+})
+
+// get the current User
+const getcurrentUser=asyncHandler(async(req,res)=>{
+    // return directly it goes through the middleware
+    return res
+    .status(200)
+    .json(200,req.user,"Current user fetched successfully")
+})
+
+// update user details
+const updateUserDetails=asyncHandler(async(req,res)=>{
+    const {fullname,email}=req.body;
+
+    if(!fullname || !email){
+        throw new ApiError(400,"This feild is required")
+    }
+    const user=await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                fullname,
+                email
+            }
+        },
+        {
+            new:true //it returns the value after the update
+        }
+
+    ).select("-password")
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200,user,"User details Updated successfully"))
+})
+
+// update files 
+// apdate avatar
+const updateAvatar=asyncHandler(async(req,res)=>{
+    const avatarLocalpath=req.file?.path //finding the local path by multer
+    
+    if (!avatarLocalpath) {
+        throw new ApiError(400,"Avatar Not found")
+    }
+    const avatar =await uploadOnCloudinary(avatarLocalpath)
+
+    if (!avatar.url) {
+        throw new ApiError(400,"Error while uploading avatar file")   //use avatar url
+    }
+
+    const user=await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            set:{
+            avatar:avatar.url
+        }
+    }
+    ).select("-password")
+
+    return req
+    .status(200)
+    .json(200,user,"Avatar updated successfully")
+})
+
+// update coverimage
+const updateCoverimage=asyncHandler(async(req,res)=>{
+    const coverimageLocalpath=req.file?.path //finding the local path by multer
+    
+    if (!coverimageLocalpath) {
+        throw new ApiError(400,"Avatar Not found")
+    }
+    const coverImage =await uploadOnCloudinary(coverimageLocalpath)
+
+    if (!coverImage.url) {
+        throw new ApiError(400,"Error while uploading avatar file")   //use avatar url
+    }
+
+    const user=await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            set:{
+            coverImage:coverImage.url
+        }
+    }
+    ).select("-password")
+
+    return req
+    .status(200)
+    .json(200,user,"coverImage updated successfully")
+})
 export {
     registerUser,
     loginUser,
     logoutUser,
-    refreshAccesstoken
+    refreshAccesstoken,
+    changepassword,
+    getcurrentUser,
+    updateUserDetails,
+    updateAvatar,
+    updateCoverimage
 }
