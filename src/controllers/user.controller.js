@@ -354,6 +354,82 @@ const updateCoverimage=asyncHandler(async(req,res)=>{
     .status(200)
     .json(new ApiResponse(200,user,"coverImage updated successfully"))
 })
+
+// Agrregation pipeline and it returns values in array form
+const getUserChannelProfile=asyncHandler(async(req,res)=>{
+    const {username}=req.params
+
+    if (!username?.trim()) {
+        throw new ApiError(400,"Username not found")
+    }
+
+    const channel = await User.aggregate([
+        {
+            $match:{
+                username:username?.toLowerCase()
+            }
+        },
+        {
+            // for subscriber
+            $lookup:{
+                from:"subscriptions", //it should be prural and lowercase
+                localField:"_id",
+                foreignField:"channel",
+                as:"subscribers"//it becomes a field
+            }
+        },
+        {
+            // for subscribed
+            $lookup:{
+                from:"subscriptions", //it should be prural and lowercase
+                localField:"_id",
+                foreignField:"subscriber",
+                as:"subscribedTo"//it becomes a field
+            }
+        },
+        {  
+            // it adds new information in the main user scheema
+            $addFields:{
+                subscribersCount:{
+                    $size:"$subscribers"
+                },
+                ChannelSubscribedtocount:{
+                    $size:"$subscribedTo"
+                },
+                isSubscribed:{
+                    $cond:{
+                        if:{$in:[req.user?._id,"Subscribers.subscriber"]},
+                        then:true,
+                        else:false
+                    }
+                }
+            }
+        },
+        {
+            // projection
+            $project:{
+                fullname:1,
+                email:1,
+                isSubscribed:1,
+                ChannelSubscribedtocount:1,
+                subscribersCount:1,
+                avatar:1,
+                coverImage:1
+            }
+        }
+    ])
+
+    if (!channel?.length) {
+        throw new ApiError(400,"channel does not exist")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200,channel,"Channel fetched successfully")
+    )
+})
+
 export {
     registerUser,
     loginUser,
